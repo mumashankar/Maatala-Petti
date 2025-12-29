@@ -6,20 +6,25 @@
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
 		<version>4.0.1</version>
-		<relativePath/> <!-- lookup parent from repository -->
+		<relativePath/>
 	</parent>
 	<groupId>com.learning.java.uma</groupId>
 	<artifactId>MaatalaPetti</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
 	<packaging>war</packaging>
-	<name>MaatalaPetti</name>
+	<name>Maatala Petti</name>
 	<description>Simple Java based Chatting application</description>
 	<url/>
 	<licenses>
 		<license/>
 	</licenses>
 	<developers>
-		<developer>Uma Shankar</developer>
+		<developer>
+			<name>Uma Shankar</name>
+			<roles>
+				<role>All in One</role>
+			</roles>
+		</developer>
 	</developers>
 	<scm>
 		<connection/>
