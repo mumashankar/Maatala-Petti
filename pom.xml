@@ -11,7 +11,7 @@
 	<groupId>com.learning.java.uma</groupId>
 	<artifactId>MaatalaPetti</artifactId>
 	<version>0.0.1-SNAPSHOT</version>
-	<packaging>war</packaging>
+	<packaging>jar</packaging>
 	<name>Maatala Petti</name>
 	<description>Simple Java based Chatting application</description>
 	<url/>
