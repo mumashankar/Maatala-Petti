@@ -1,0 +1,376 @@
+// ============================================================================
+// LAYER 1: Simple Wrapper - Basic Connection
+// ============================================================================
+
+import java.net.URI;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+
+public class ClaudeController {
+
+    private static final String API_URL = "https://api.anthropic.com/v1/messages";
+    private static final String API_VERSION = "2023-06-01";
+    private String apiKey;
+
+    public ClaudeController(String apiKey) {
+        this.apiKey = apiKey;
+    }
+
+    // Simple method to send a message to Claude
+    public String sendMessage(String userMessage) throws Exception {
+        HttpClient client = HttpClient.newHttpClient();
+
+        String jsonBody = String.format("""
+            {
+                "model": "claude-sonnet-4-20250514",
+                "max_tokens": 1024,
+                "messages": [
+                    {"role": "user", "content": "%s"}
+                ]
+            }
+            """, userMessage);
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(API_URL))
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", API_VERSION)
+            .header("content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+        HttpResponse<String> response = client.send(request,
+            HttpResponse.BodyHandlers.ofString());
+
+        return response.body();
+    }
+
+    // Test method
+    public static void main(String[] args) {
+        try {
+            ClaudeController controller = new ClaudeController("your-api-key-here");
+            String response = controller.sendMessage("Hello, Claude!");
+            System.out.println(response);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+}
+
+
+// ============================================================================
+// LAYER 2: Add Response Parsing & Better Structure
+// ============================================================================
+// Uncomment below to use Layer 2
+
+/*
+import com.google.gson.Gson;
+import com.google.gson.JsonObject;
+
+public class ClaudeController {
+
+    private static final String API_URL = "https://api.anthropic.com/v1/messages";
+    private static final String API_VERSION = "2023-06-01";
+    private String apiKey;
+    private HttpClient client;
+    private Gson gson;
+
+    public ClaudeController(String apiKey) {
+        this.apiKey = apiKey;
+        this.client = HttpClient.newHttpClient();
+        this.gson = new Gson();
+    }
+
+    public ClaudeResponse sendMessage(String userMessage) throws Exception {
+        String jsonBody = buildRequestBody(userMessage);
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(API_URL))
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", API_VERSION)
+            .header("content-type", "application/json")
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+        HttpResponse<String> response = client.send(request,
+            HttpResponse.BodyHandlers.ofString());
+
+        return parseResponse(response.body());
+    }
+
+    private String buildRequestBody(String message) {
+        JsonObject body = new JsonObject();
+        body.addProperty("model", "claude-sonnet-4-20250514");
+        body.addProperty("max_tokens", 1024);
+
+        JsonObject[] messages = new JsonObject[1];
+        messages[0] = new JsonObject();
+        messages[0].addProperty("role", "user");
+        messages[0].addProperty("content", message);
+        body.add("messages", gson.toJsonTree(messages));
+
+        return gson.toJson(body);
+    }
+
+    private ClaudeResponse parseResponse(String jsonResponse) {
+        JsonObject json = gson.fromJson(jsonResponse, JsonObject.class);
+        String text = json.getAsJsonArray("content")
+            .get(0).getAsJsonObject()
+            .get("text").getAsString();
+
+        return new ClaudeResponse(text, json.get("id").getAsString());
+    }
+
+    // Response wrapper class
+    public static class ClaudeResponse {
+        private String text;
+        private String id;
+
+        public ClaudeResponse(String text, String id) {
+            this.text = text;
+            this.id = id;
+        }
+
+        public String getText() { return text; }
+        public String getId() { return id; }
+    }
+}
+*/
+
+
+// ============================================================================
+// LAYER 3: Add Error Handling & Retry Logic
+// ============================================================================
+// Full implementation with proper error handling
+
+/*
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+public class ClaudeController {
+
+    private static final String API_URL = "https://api.anthropic.com/v1/messages";
+    private static final String API_VERSION = "2023-06-01";
+    private static final int MAX_RETRIES = 3;
+    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+
+    private String apiKey;
+    private HttpClient client;
+    private Gson gson;
+
+    public ClaudeController(String apiKey) {
+        if (apiKey == null || apiKey.trim().isEmpty()) {
+            throw new IllegalArgumentException("API key cannot be null or empty");
+        }
+        this.apiKey = apiKey;
+        this.client = HttpClient.newBuilder()
+            .connectTimeout(TIMEOUT)
+            .build();
+        this.gson = new Gson();
+    }
+
+    public ClaudeResponse sendMessage(String userMessage) throws ClaudeException {
+        validateMessage(userMessage);
+
+        for (int attempt = 1; attempt <= MAX_RETRIES; attempt++) {
+            try {
+                return executeRequest(userMessage);
+            } catch (Exception e) {
+                if (attempt == MAX_RETRIES) {
+                    throw new ClaudeException("Failed after " + MAX_RETRIES + " attempts", e);
+                }
+
+                // Exponential backoff
+                try {
+                    TimeUnit.SECONDS.sleep((long) Math.pow(2, attempt));
+                } catch (InterruptedException ie) {
+                    Thread.currentThread().interrupt();
+                    throw new ClaudeException("Request interrupted", ie);
+                }
+            }
+        }
+        throw new ClaudeException("Unexpected error");
+    }
+
+    private ClaudeResponse executeRequest(String userMessage) throws Exception {
+        String jsonBody = buildRequestBody(userMessage);
+
+        HttpRequest request = HttpRequest.newBuilder()
+            .uri(URI.create(API_URL))
+            .header("x-api-key", apiKey)
+            .header("anthropic-version", API_VERSION)
+            .header("content-type", "application/json")
+            .timeout(TIMEOUT)
+            .POST(HttpRequest.BodyPublishers.ofString(jsonBody))
+            .build();
+
+        HttpResponse<String> response = client.send(request,
+            HttpResponse.BodyHandlers.ofString());
+
+        handleHttpErrors(response);
+        return parseResponse(response.body());
+    }
+
+    private void validateMessage(String message) throws ClaudeException {
+        if (message == null || message.trim().isEmpty()) {
+            throw new ClaudeException("Message cannot be null or empty");
+        }
+    }
+
+    private void handleHttpErrors(HttpResponse<String> response) throws ClaudeException {
+        int status = response.statusCode();
+        if (status >= 400) {
+            String error = String.format("HTTP %d: %s", status, response.body());
+            throw new ClaudeException(error);
+        }
+    }
+
+    private String buildRequestBody(String message) {
+        // Same as Layer 2
+    }
+
+    private ClaudeResponse parseResponse(String jsonResponse) {
+        // Same as Layer 2
+    }
+
+    // Custom exception class
+    public static class ClaudeException extends Exception {
+        public ClaudeException(String message) {
+            super(message);
+        }
+        public ClaudeException(String message, Throwable cause) {
+            super(message, cause);
+        }
+    }
+}
+*/
+
+
+// ============================================================================
+// LAYER 4: Add Security, Rate Limiting & Conversation Context
+// ============================================================================
+// Production-ready implementation
+
+/*
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.Semaphore;
+import javax.crypto.Mac;
+import javax.crypto.spec.SecretKeySpec;
+import java.util.Base64;
+
+public class ClaudeController {
+
+    private static final String API_URL = "https://api.anthropic.com/v1/messages";
+    private static final String API_VERSION = "2023-06-01";
+    private static final int MAX_RETRIES = 3;
+    private static final Duration TIMEOUT = Duration.ofSeconds(30);
+
+    private String apiKey;
+    private HttpClient client;
+    private Gson gson;
+    private Semaphore rateLimiter;
+    private List<Message> conversationHistory;
+
+    public ClaudeController(String apiKey, int maxRequestsPerMinute) {
+        this.apiKey = sanitizeApiKey(apiKey);
+        this.client = HttpClient.newBuilder()
+            .connectTimeout(TIMEOUT)
+            .build();
+        this.gson = new Gson();
+        this.rateLimiter = new Semaphore(maxRequestsPerMinute);
+        this.conversationHistory = new ArrayList<>();
+    }
+
+    public ClaudeResponse sendMessage(String userMessage, boolean maintainContext)
+            throws ClaudeException {
+
+        // Rate limiting
+        try {
+            rateLimiter.acquire();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+            throw new ClaudeException("Rate limiter interrupted", e);
+        }
+
+        validateMessage(userMessage);
+
+        if (maintainContext) {
+            conversationHistory.add(new Message("user", userMessage));
+        }
+
+        try {
+            ClaudeResponse response = executeRequestWithRetry(
+                maintainContext ? conversationHistory :
+                List.of(new Message("user", userMessage))
+            );
+
+            if (maintainContext) {
+                conversationHistory.add(new Message("assistant", response.getText()));
+            }
+
+            return response;
+        } finally {
+            // Release rate limit after delay
+            new Thread(() -> {
+                try {
+                    TimeUnit.MINUTES.sleep(1);
+                    rateLimiter.release();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                }
+            }).start();
+        }
+    }
+
+    public void clearContext() {
+        conversationHistory.clear();
+    }
+
+    private String sanitizeApiKey(String key) throws IllegalArgumentException {
+        if (key == null || !key.matches("sk-ant-[a-zA-Z0-9-_]+")) {
+            throw new IllegalArgumentException("Invalid API key format");
+        }
+        return key;
+    }
+
+    private ClaudeResponse executeRequestWithRetry(List<Message> messages)
+            throws ClaudeException {
+        // Same retry logic as Layer 3
+    }
+
+    // Message class for conversation context
+    private static class Message {
+        String role;
+        String content;
+
+        Message(String role, String content) {
+            this.role = role;
+            this.content = content;
+        }
+    }
+
+    // Usage example:
+    public static void main(String[] args) {
+        ClaudeController controller = new ClaudeController(
+            "your-api-key-here",
+            50  // 50 requests per minute
+        );
+
+        try {
+            // Single message
+            ClaudeResponse response = controller.sendMessage("Hello!", false);
+            System.out.println(response.getText());
+
+            // Conversational context
+            controller.sendMessage("My name is John", true);
+            ClaudeResponse contextual = controller.sendMessage(
+                "What's my name?", true);
+            System.out.println(contextual.getText());
+
+        } catch (ClaudeException e) {
+            e.printStackTrace();
+        }
+    }
+}
+*/
