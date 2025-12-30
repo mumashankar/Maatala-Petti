@@ -26,7 +26,7 @@ public class ChatController {
     public ChatController() {
         Dotenv dotenv = Dotenv.load();
         this.apiUrl = dotenv.get("API_URL");
-        this.apikey = dotenv.get("API_ANSWER1");
+        this.apikey = dotenv.get("API_ANSWER1") + "-" + dotenv.get("API_ANSWER2") + "-" + dotenv.get("API_ANSWER3");
     }
 
     @GetMapping("/hello")
