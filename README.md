@@ -1,6 +1,3 @@
-Here’s a clean, beginner‑friendly **README.md** you can drop into your Git repo. It explains what your app does, how to run it, and how to configure environment variables:
-
-```markdown
 # Simple Chat Application
 
 A lightweight web chat application built with **Spring Boot** and a modern frontend.  
