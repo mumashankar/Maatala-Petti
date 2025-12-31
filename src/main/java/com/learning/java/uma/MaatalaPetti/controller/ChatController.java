@@ -26,7 +26,10 @@ public class ChatController {
     private String apikey;
 
     public ChatController() {
-        Dotenv dotenv = Dotenv.load();
+        Dotenv dotenv = Dotenv
+                            .configure()
+                            .ignoreIfMissing()
+                            .load();
         this.apiUrl = dotenv.get("API_URL");
         this.apikey = dotenv.get("API_ANSWER1") + "-" + dotenv.get("API_ANSWER2") + "-" + dotenv.get("API_ANSWER3");
     }
