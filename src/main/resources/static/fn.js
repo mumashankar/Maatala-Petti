@@ -28,7 +28,7 @@ function hideLoadingDiv() {
 
 function submitQuery(qStr) {
     var timeStmp;
-    showLoadingDiv();console.log(qStr, encodeURIComponent(qStr));
+    showLoadingDiv();
     setTimeout(() => {
         fetch("/api/sendMsg?userMessage="+encodeURIComponent(qStr), {
               method: "POST",
@@ -79,28 +79,6 @@ function formatTimestampToTime(timestamp) {
   hours = hours ? hours : 12
   minutes = minutes < 10 ? "0" + minutes : minutes
   return `${hours}:${minutes} ${ampm}`
-}
-
-function addQuestion(text) {
-    const div = document.createElement('div');
-    div.className = 'message question';
-    div.textContent = text;
-    chatbox.appendChild(div);
-    chatbox.scrollTop = chatbox.scrollHeight;
-}
-
-function addAnswer(text, timeStmp) {
-    const div = document.createElement('div');
-    div.className = 'message answer';
-    div.textContent = text;
-
-    const timeDiv = document.createElement('div');
-    timeDiv.className = 'time';
-    timeDiv.textContent = formatTimestampToTime(timeStmp);
-    div.appendChild(timeDiv);
-
-    chatbox.appendChild(div);
-    chatbox.scrollTop = chatbox.scrollHeight;
 }
 
 function addMsgToChatBox( msgType, text, timeStmp){
