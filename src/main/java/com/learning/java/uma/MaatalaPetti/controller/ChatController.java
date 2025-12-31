@@ -7,6 +7,8 @@ import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 import java.net.URI;
@@ -41,8 +43,8 @@ public class ChatController {
 
     @PostMapping("/sendMsg")
     public String sendMessage(@RequestParam String userMessage) throws Exception {
+        userMessage = URLEncoder.encode(userMessage, StandardCharsets.UTF_8);
         HttpClient client = HttpClient.newHttpClient();
-        System.out.println("Calling sendMessage with "+userMessage);
         String payload = String.format("""
                {
                 "model": "gpt-4.1-mini",
